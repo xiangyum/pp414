@@ -1,0 +1,3 @@
+"0","assigned <- filter(df, expstat == 1)"
+"0","unassigned <- filter(df, expstat == 0)"
+"0","itt_est <- mean(assigned$emp) - mean(unassigned$emp)"

@@ -1,0 +1,8 @@
+"0","df <- read_csv(""JTPA.csv"")"
+"2","Parsed with column specification:
+cols(
+  .default = col_integer()
+)
+"
+"2","See spec(...) for full column specifications.
+"

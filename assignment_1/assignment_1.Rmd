@@ -1,0 +1,268 @@
+---
+title: "Assignment 1"
+author: "Xiangyu Ma"
+date: "10/10/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  include = FALSE,
+  options(digits = 3))
+```
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(MASS)
+library(sem)
+set.seed(47)
+```
+
+
+
+```{r}
+df <- read_csv("JTPA.csv")
+```
+# Question 1
+
+## 1.
+
+```{r}
+df$expstat2 <- cut(df$expstat, breaks = 2, labels = c("Not assigned", "Assigned"), ordered_result =  TRUE)
+df$treated2 <- cut(df$treated, breaks = 2, labels = c("Untreated", "Treated"), ordered_result =  TRUE)
+cont1 <- table(df$expstat2, df$treated2)
+```
+
+
+```{r, include = TRUE, echo= FALSE}
+kable(cont1, caption = "Contingency table of Assignment X Treatment")
+```
+
+We can observe from Table 1 that there is substantial crossover between the two. 307 of individuals who were assigned to the control group were treated anyway; 647 of those assigned treatment did not receive treatment.
+
+We can run a logistic regression with the treatment status as the dependent variable, and all of the observable variables as the independent variable. Observable variables that correlate with treatment status are not balanced between the two groups.
+
+## 2.
+
+```{r}
+assigned <- filter(df, expstat == 1)
+unassigned <- filter(df, expstat == 0)
+itt_est <- mean(assigned$emp) - mean(unassigned$emp)
+```
+
+The ITT parameter without covariate is $`r itt_est`$.
+
+## 3. 
+
+```{r}
+dim(df)
+```
+
+
+
+
+```{r}
+pc <- mean(assigned$treated) - mean(unassigned$treated)
+bloom <- itt_est/pc
+bloom
+itt_est
+```
+
+The Bloom estimand without covariate is $`r bloom`$.
+
+## 4.
+
+```{r}
+names(df)
+```
+
+
+```{r}
+lm1 <- lm(emp ~ expstat + afdc_ra + badenglh + fdst_ra + ged + kids + kidsud4 + longafdc + married + minor02 + minor03 + minor04 + neveradc + neverwrk + nodegree + single + numinhh + schlhgst + agesq + pre12ern + pre12wrk + age, data = df)
+```
+
+```{r}
+summary(lm1)
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+iv_bloom <- tsls(emp ~ treated, ~expstat, df)
+
+iv_bloom2 <- tsls(emp ~ treated + afdc_ra + badenglh + fdst_ra + ged , 
+                  ~expstat + afdc_ra + badenglh + fdst_ra + ged , df)
+
+```
+
+
+```{r}
+summary(iv_bloom)
+
+summary(iv_bloom2)
+```
+
+ # make a table of standard errors.
+
+
+## 5. 
+
+There's the issue of multicollinearity as we add in more and more covariates (that are likely to be highly correlated with one another). This leads to higher standard errors, and increases the likelihood of us making type II errors, where we accept a null hypothesis falsely.
+
+# Question 2.
+
+## 1.
+
+```{r}
+# generate a bivariate normal distribution
+distr1 <- mvrnorm(1000, c(0, 0), matrix(c(10000^2, 0, 0 , 20000^2),2))
+colnames(distr1) <- c("no_college","college")
+
+q2 <- as.data.frame(distr1)
+write_csv(q2, "generated_data.csv")
+
+q2 <- read_csv("generated_data.csv") %>%
+  mutate(college_income = 50000 + college) %>%
+  mutate(noncollege_income = 40000 + no_college)%>%
+  mutate(decision = ifelse(college_income>noncollege_income, 1, 0))
+
+q1ans <- count(q2, decision)
+```
+
+
+$`r q1ans$n[q1ans$decision==1]/1000*100`$% of people went to college.
+
+
+## 2.
+
+```{r}
+q2 <- mutate(q2, observed_income =  ifelse(decision == 1, college_income, noncollege_income))
+```
+
+
+```{r}
+# naive estimator
+q2_col <- filter(q2, decision == 1)
+q2_hs <-filter(q2, decision == 0)
+
+naive_estimate <- mean(q2_col$observed_income) - mean(q2_hs$observed_income)
+```
+
+The "naive" estimate of the effects of obtaining a college degree on earnings is $`r naive_estimate`$.
+
+## 3.
+
+```{r}
+q2 <- mutate(q2, treatment_effect = college_income - noncollege_income)
+ate <- mean(q2$treatment_effect)
+```
+
+This gives us an Average Treatment Effect (ATE) of `r ate`. We can see that the ATE is smaller than the naive estimate. This is because the naive estimate certain (false) assumptions about the data, it assumes that treatment is random, that those who are untreated can serve as the counterfactual to those who were treated. In reality, however, this does not hold. This leads to a selection bias. Since we generated the data ourselves, we know what the self-selection process is, and we know that it's non-random: we assume that a student goes to college if his/her earnings are higher as a college student. This leads to a positive selection bias, and correspondingly to an overestimate on the part of the naive estimate.
+
+## 4. 
+
+```{r}
+temp1 <- filter(q2, decision == 1) 
+temp2 <- filter(q2, decision == 0) 
+att <- mean(temp1$treatment_effect)
+atn <- mean(temp2$treatment_effect)
+```
+
+The Average effect of Treatment on the Treated (ATT) is $`r att`$, and the the Average effect of Treatment on the Non-treated (ATN) is $`r atn`$. The consequences of such a policy may be undesirable in our world (I say "may," because there may be non-income benefits to a college education.) We can observe from the ATN that a "college-for-all" situation would lead to an average decrease in income of $`r atn`$. So, such a policy would harm these non-college educated individuals income-wise.
+
+## 5.
+```{r}
+covariance_xy <- 0.6 * 10000 * 20000
+
+# generate another bivariate normal distribution
+distr2 <- mvrnorm(1000, c(0, 0), matrix(c(10000^2, covariance_xy, covariance_xy , 20000^2),2))
+colnames(distr2) <- c("no_college","college")
+
+q2b <- as.data.frame(distr2)
+write_csv(q2b, "generated_data2.csv")
+```
+
+
+```{r}
+q2b <- read_csv("generated_data2.csv")
+
+q2b <- mutate(q2b, college_income = 50000 + college) %>%
+  mutate(noncollege_income = 40000 + no_college) 
+
+q2b <- mutate(q2b, decision = ifelse(college_income>noncollege_income, 1, 0))
+
+```
+
+```{r}
+q5ans <- count(q2b, decision)
+```
+
+```{r}
+q5ans$n[q5ans$decision==1]/1000*100
+```
+
+
+$`r q5ans$n[q5ans$decision==1]/1000*100`$% of people will go to college in this scenario. This is more than before. 
+
+```{r}
+q2b <- mutate(q2b, observed_income =  ifelse(decision == 1, college_income, noncollege_income))
+
+# naive estimator
+q2b_col <- filter(q2b, decision == 1)
+q2b_hs <-filter(q2b, decision == 0)
+
+naive_estimate2 <- mean(q2b_col$observed_income) - mean(q2b_hs$observed_income)
+
+q2b <- mutate(q2b, treatment_effect = college_income - noncollege_income)
+ate2 <- mean(q2b$treatment_effect)
+```
+
+In the new scenario, we have an naive estimate of  $`r naive_estimate2`$ and an ATE of $`r ate2`$.
+
+## 6.
+  
+```{r}
+covariance_xy <- -0.5 * 10000 * 20000
+
+# generate another bivariate normal distribution
+distr3 <- mvrnorm(1000, c(0, 0), matrix(c(10000^2, covariance_xy, covariance_xy , 20000^2),2))
+colnames(distr3) <- c("no_college","college")
+
+q2c <- as.data.frame(distr3)
+write_csv(q2c, "generated_data3.csv")
+
+q2c <- read_csv("generated_data3.csv")
+
+q2c <- mutate(q2c, college_income = 50000 + college) %>%
+  mutate(noncollege_income = 40000 + no_college) 
+
+q2c <- mutate(q2c, decision = ifelse(college_income>noncollege_income, 1, 0))
+
+q6ans <- count(q2c, decision)
+
+q2c <- mutate(q2c, observed_income =  ifelse(decision == 1, college_income, noncollege_income))
+
+# naive estimator
+q2c_col <- filter(q2c, decision == 1)
+q2c_hs <-filter(q2c, decision == 0)
+
+naive_estimate3 <- mean(q2c_col$observed_income) - mean(q2c_hs$observed_income)
+
+q2c <- mutate(q2c, treatment_effect = college_income - noncollege_income)
+ate3 <- mean(q2c$treatment_effect)
+```
+
+In the final scenario, we have an naive estimate of  $`r naive_estimate3`$ and an ATE of $`r ate3`$.
+
+```{r}
+naive_estimate2
+naive_estimate3
+ate2
+ate3
+```
+

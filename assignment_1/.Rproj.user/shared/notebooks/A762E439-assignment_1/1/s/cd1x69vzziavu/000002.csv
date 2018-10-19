@@ -1,0 +1,1 @@
+"0","lm1 <- lm(emp ~ expstat + afdc_ra + badenglh + fdst_ra + ged + kids + kidsud4 + longafdc + married + minor02 + minor03 + minor04 + neveradc + neverwrk + nodegree + single + numinhh + schlhgst + agesq + pre12ern + pre12wrk + age, data = df)"

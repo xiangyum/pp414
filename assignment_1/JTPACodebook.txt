@@ -1,0 +1,68 @@
+  afdc_ra           receiving AFDC (welfare) at application
+  badenglh          code 1 if bad english speaker
+  emp               is person employed in 18 month after Random assignment
+  expstat           Experimental Status 1 if treatment
+  fdst_ra           receiving food stamps at application
+  ged               if had ged certification
+  kids              Children live with you
+  kidsud4           Under 4 kids live with you
+  longafdc          received AFDC for 2 or more years
+  married           married living w/ spouce
+  minor02           nonhispanic blacks
+  minor03           Hispanics
+  minor04           Other ethnics or missing
+  neveradc          never received AFDC payments
+  neverful          if never worked in full time job
+  neverwrk          if never worked for pay
+  nodegree          if high school dropout
+  single            if never married
+  numinhh           Number in Rs Household
+  schlhgst          highest grade completed
+  agesq             Age in years squared
+  pre12ern          gross earnings 12 months prior to
+  pre12wrk          fraction weeks wrk prior 12 months
+  bifid             unique baseline id number
+  age               AGE during monthly period
+  caltime           calendar time expressed in months 1 to 48 
+  site              site codes for the 16 sites in NJS study
+  treated						Received classroom training
+  
+
+                                                                       
+      Variable |        Obs        Mean    Std. Dev.       Min        Max
+  -------------+---------------------------------------------------------
+       afdc_ra |      2,518    .4634631    .4987623          0          1
+      badenglh |      2,709    .0490956    .2161075          0          1
+           emp |      2,734    .5329188    .4990064          0          1
+       expstat |      2,734    .6733723    .4690656          0          1
+       fdst_ra |      2,653    .5631361    .4960913          0          1
+  -------------+---------------------------------------------------------
+           ged |      2,587    .2269037    .4189108          0          1
+          kids |      2,544    .8073899    .3944269          0          1
+       kidsud4 |      2,502    .3349321    .4720611          0          1
+      longafdc |      2,693    .3419978     .474467          0          1
+       married |      2,518    .2164416    .4119005          0          1
+  -------------+---------------------------------------------------------
+       minor02 |      2,734    .3379663    .4731035          0          1
+       minor03 |      2,734    .1305779    .3369998          0          1
+       minor04 |      2,734     .032553    .1774961          0          1
+      neveradc |      2,725    .3952294    .4889896          0          1
+      neverful |      2,734    .0797366    .2709346          0          1
+  -------------+---------------------------------------------------------
+      neverwrk |      2,734    .1905633    .3928172          0          1
+      nodegree |      2,628    .4939117    .5000581          0          1
+        single |      2,518    .3490866    .4767761          0          1
+       numinhh |      2,679     3.41956    1.759686          1         40
+      schlhgst |      2,694    11.33779    1.704782          7         18
+  -------------+---------------------------------------------------------
+         agesq |      2,734    1240.578    794.0792     552.25    6162.25
+      pre12ern |      1,739    2765.347    3542.855          0      46000
+      pre12wrk |      2,426    .3053063    .3581556          0          1
+         bifid |          0                                              
+           age |      2,734    33.93233    9.444989       23.5       78.5
+  -------------+---------------------------------------------------------
+       caltime |      2,734    26.47184    4.258451         17         38
+          site |      2,734    8.604609    4.802868          1         16
+       treated |      2,734    .5490124     .497683          0          1
+                                                                       
+  .                                                                      
