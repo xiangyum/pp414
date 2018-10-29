@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "---\ntitle: \"Assignment 3\"\nauthor: \"Xiangyu Ma\"\ndate: \"10/28/2018\"\noutput: pdf_document\n---\n\n```{r setup, include=FALSE}\nknitr::opts_chunk$set(echo = TRUE)\n```\n\n\n```{r}\nlibrary(tidyverse)\nlibrary(ggplot2)\nlibrary(ipumsr) # this ipum package needs to be installed\n```\n\n# Variables to include:\n\nstateicp & statefip\nperwt\nage\nsex\nnchild\neducd\nschool\nrace\nhispan\nmet2013\nwkswork2\nuhrswork\nwrklstwk\nincwage\nincearn\n\n```{r}\n# load data\nddi <- read_ipums_ddi(\"usa_00001.xml\")\ndf <- read_ipums_micro(ddi)\n```\n\n\n```{r}\n# recode race into 4 categories, as xy_race\ndf <- mutate(df, xy_race = if_else(RACE == 1, \"White\", \n                                   if_else(RACE == 2, \"Black\",\n                                           if_else(RACE >3 & RACE < 7, \"Asian\", \"Other\")))) \n\n# recode hispanic into binary variable, xy_hisp\ndf <- mutate(df, xy_hisp = if_else(HISPAN == 0, 0, 1))\n\n# recode met2013 into a binary varible, xy_met\ndf <- mutate(df, xy_met = if_else(MET2013 == 0, 0, 1))\n\n# recode a bunch of dummy variables for education\ndf <- mutate(df, less_hs = if_else(EDUCD < 30, 1, 0)) %>%\n  mutate(some_hs = if_else(EDUCD >= 30 & EDUCD < 60, 1, 0)) %>%\n  mutate(ged = if_else(EDUCD == 64, 1, 0)) %>%\n  mutate(hs_grad = if_else(EDUCD == 63, 1, 0)) %>%\n  mutate(some_col = if_else((EDUCD > 64 & EDUCD < 81), 1, \n    if_else(EDUCD == 90, 1, \n        if_else(EDUCD == 100, 1, \n            if_else(EDUCD >= 110 & EDUC < 114, 1, 0))))) %>%\n  mutate(assoc_deg = if_else(EDUCD > 80 & EDUC <90, 1, 0)) %>%\n  mutate(bach = if_else(EDUCD == 101, 1, 0)) %>%\n  mutate(masters = if_else(EDUCD == 114, 1, 0)) %>%\n  mutate(profd = if_else(EDUCD == 115, 1, 0)) %>%\n  mutate(phd = if_else(EDUCD == 116, 1, 0))\n```\n\n# Question 1\n\n```{r}\n\n```\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "created" : 1540782100284.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4125761626",
+    "id" : "F1F935BB",
+    "lastKnownWriteTime" : 1540785186,
+    "last_content_update" : 1540785186159,
+    "path" : "~/Documents/research_projects/pp414_applied_regression_analysis/assignment_2/main.Rmd",
+    "project_path" : "main.Rmd",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
