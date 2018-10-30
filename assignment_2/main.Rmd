@@ -14,6 +14,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
 library(ipumsr) # this ipum package needs to be installed
+library(stargazer)
+library(ggplot2)
+library(glm)
 ```
 
 # Variables to include:
@@ -69,15 +72,34 @@ df <- mutate(df, less_hs = if_else(EDUCD < 30, 1, 0)) %>%
   mutate(phd = if_else(EDUCD == 116, 1, 0))
 ```
 
-# Question 1
-
+# Question 1: Run an OLS equation using whether the woman has a child or not against her age, education, race, Hispanic status, and place of residence. Recover the predicted values. Are they within the unit interval?
 ```{r}
-
+names(df)
 ```
 
 
 
+```{r}
+lm1 <- lm(NCHILD ~ SEX + AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_deg + bach + masters + profd + phd + xy_race + xy_hisp + MET2013, df)
+```
 
+```{r}
+q1_predicted <- as_tibble(list(pred = lm1$fitted.values))
+```
+
+
+```{r}
+ggplot(q1_predicted, aes(x = pred))+
+  geom_histogram(binwidth = 0.01)
+```
+
+# Question 2: Run the same equation using a logit model rather than the OLS. Recover the predicted values. What is the correlation between the predicted values in question one and two?
+
+```{r}
+lm2 <- glm(NCHILD ~ SEX + AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_deg + bach + masters + profd + phd + xy_race + xy_hisp + MET2013, 
+    family = binomial(link = "logit"),
+    data = df)
+```
 
 
 
