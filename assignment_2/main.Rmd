@@ -21,30 +21,11 @@ library(survey)
 library(caret)
 ```
 
-# Variables to include:
-
-stateicp & statefip
-perwt
-age
-sex
-nchild
-educd
-school
-race
-hispan
-met2013
-wkswork2
-uhrswork
-wrklstwk
-incwage
-incearn
-
-```{r}
+```{r, include = FALSE}
 # load data
 ddi <- read_ipums_ddi("usa_00001.xml")
 df <- read_ipums_micro(ddi)
 ```
-
 
 
 ```{r}
@@ -64,8 +45,9 @@ df <- mutate(df, xy_hisp = if_else(HISPAN == 0, 0, 1))
 df <- mutate(df, xy_met = if_else(MET2013 == 0, 0, 1))
 
 # recode a bunch of dummy variables for education
+
 df <- mutate(df, less_hs = if_else(EDUCD < 30, 1, 0)) %>%
-  mutate(some_hs = if_else(EDUCD >= 30 & EDUCD < 60, 1, 0)) %>%
+  mutate(some_hs = if_else(EDUCD >= 30 & EDUCD <= 61, 1, 0)) %>%
   mutate(ged = if_else(EDUCD == 64, 1, 0)) %>%
   mutate(hs_grad = if_else(EDUCD == 63, 1, 0)) %>%
   mutate(some_col = if_else((EDUCD > 64 & EDUCD < 81), 1, 
@@ -78,25 +60,51 @@ df <- mutate(df, less_hs = if_else(EDUCD < 30, 1, 0)) %>%
   mutate(profd = if_else(EDUCD == 115, 1, 0)) %>%
   mutate(phd = if_else(EDUCD == 116, 1, 0)) %>%
   mutate(child = if_else(NCHILD == 0, 0, 1))
+
+df_test <- mutate(df, educ_xy = if_else(less_hs==1, "less_hs", 
+                                        if_else(some_hs==1, "some_hs", 
+                                                if_else(ged==1, "ged",
+                                                        if_else(hs_grad==1, "hs_grad",
+                                                                if_else(some_col==1, "some_col",
+                                                                        if_else(assoc_deg==1, "assoc_deg",
+                                                                                if_else(bach==1, "bach",
+                                                                                        if_else(masters==1, "masters",
+                                                                                                if_else(profd==1, "profd",
+                                                                                                        if_else(phd==1, "phd", "NA")))))))))))
+
 ```
 
 
 # Question 1: Run an OLS equation using whether the woman has a child or not against her age, education, race, Hispanic status, and place of residence. Recover the predicted values. Are they within the unit interval?
 
+We include sample weights in all of our regressions. We run the OLS as asked: 
 
-```{r}
-lm1 <- lm(child ~ AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_deg + bach + masters + profd + phd + xy_race + xy_hisp + xy_met, 
+```{r, echo = TRUE}
+lm1 <- lm(child ~ AGE + educ_xy + xy_race + xy_hisp + xy_met, 
           weights = PERWT, 
-          df)
+          df_test)
 ```
 
 ```{r}
 q1_predicted <- as_tibble(list(pred = lm1$fitted.values))
 ```
 
+Below are the summary statistics and histogram for the recovered predicted values:
 
 ```{r}
 summary(q1_predicted$pred)
+```
+
+```{r}
+ggplot(q1_predicted, aes(x = pred))+
+  geom_histogram(bins = 50, fill = "navy")+
+  labs(
+    x = "Predicted Values",
+    y = "No. of values",
+    title = "Predicted Values from the OLS",
+    xcoords = c(-0.5, 1.5)
+  )+
+  theme_light()
 ```
 
 
@@ -110,7 +118,7 @@ The smallest predicted value is $`r q1min`$ and the largest is $`r q1max`$. They
 
 # Question 2: Run the same equation using a logit model rather than the OLS. Recover the predicted values. What is the correlation between the predicted values in question one and two?
 
-Remember to manually code the weights, by duplicating each row by their weights.
+Again, we run the regression as posed:
 
 ```{r, eval= FALSE}
 # logit w/o weights
@@ -120,148 +128,81 @@ lm2 <- glm(child ~ AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_de
 ```
 
 
-```{r}
+```{r, echo = TRUE}
 # logit with weights (using survey::svyglm)
-sd1 <- svydesign(ids = ~0,weights = df$PERWT, data = df)
+sd1 <- svydesign(ids = ~0,weights = df$PERWT, data = df_test)
 
-lm2 <- svyglm(child ~ AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_deg + bach + masters + profd + phd + xy_race + xy_hisp + xy_met, 
+lm2 <- svyglm(child ~ AGE + educ_xy + xy_race + xy_hisp + xy_met, 
     family = binomial(link = "logit"),
     design = sd1)
 ```
 
 ```{r}
-summary(lm2)
-lm2$aic
-```
-
-
-```{r}
 q1_predicted$logit_pred <-lm2$fitted.values
 ```
 
+Below are the summary statistics and histogram for the recovered predicted values:
+```{r}
+summary(q1_predicted$logit_pred)
+```
 
+```{r}
+ggplot(q1_predicted, aes(x = logit_pred))+
+  geom_histogram(bins = 50, fill = "orangered")+
+  labs(
+    x = "Predicted Values",
+    y = "No. of values",
+    title = "Predicted Values from Logit Regression",
+    xcoords = c(-0.5, 1.5)
+  )+
+  theme_light()
+```
 
 
 ```{r}
 lm_preds <- lm(pred~logit_pred, data = q1_predicted)
 ```
 
+
 ```{r}
 summary(lm_preds)
 ```
 
+The correlation between the two sets of predicted values is 0.988.
 
 # Q3: Run a fully saturated OLS model. How many instances do you a predicted value of zero or one?
 
+We run a fully saturated OLS model. The code is as follows:
 ```{r}
-df$age_factor <- as_factor(df$AGE)
-
-df <- mutate(df, 
-             sat_mod = with(df, 
-                            interaction(age_factor, 
-                                        less_hs, 
-                                        some_hs, 
-                                        ged, 
-                                        hs_grad, 
-                                        some_col, 
-                                        assoc_deg, 
-                                        bach, 
-                                        masters, 
-                                        profd, 
-                                        phd, 
-                                        xy_race, 
-                                        xy_hisp, 
-                                        xy_met)))
-```
-
-
-
-
-```{r}
-fsmodel <- lm(child ~ sat_mod, 
-              weights = PERWT,
-              df)
-```
-
-```{r}
-df_test <- mutate(df, educ_xy = if_else(less_hs==1, "less_hs", 
-                                        if_else(some_hs==1, "some_hs", 
-                                                if_else(ged==1, "ged",
-                                                        if_else(hs_grad==1, "hs_grad",
-                                                                if_else(some_col==1, "some_col",
-                                                                        if_else(assoc_deg==1, "assoc_deg",
-                                                                                if_else(bach==1, "bach",
-                                                                                        if_else(masters==1, "masters",
-                                                                                                if_else(profd==1, "profd",
-                                                                                                        if_else(phd==1, "phd", "NA")))))))))))
-
 df_test <- mutate(df_test, 
-             sat_mod = with(df_test, 
-                            interaction(age_factor, 
+             sat_mod = with(df_test,interaction(age_factor, 
                                         educ_xy,
                                         xy_race, 
                                         xy_hisp, 
                                         xy_met)))
 
-```
-
-```{r}
 fsmodel2 <- lm(child ~ sat_mod, 
+               weights = PERWT,
               df_test)
-```
-
-```{r}
-summary(fsmodel2)
-```
-
-
-```{r}
-# sat_mod27.some_col.Other.1.0   3.333e-01  3.847e-01   0.867  0.38621   
-fs_test <- filter(df_test, AGE == 27, educ_xy == "some_col", xy_race == "Other", xy_hisp == 1, xy_met == 0)
-mean(fs_test$child)
 ```
 
 
 ```{r}
 q1_predicted$fs_pred <- fsmodel2$fitted.values
-```
 
-```{r}
-histogram(fsmodel2$fitted.values)
-```
-
-```{r}
-summary(q1_predicted$fs_pred)
-```
-
-
-```{r}
 num_0 <- count(q1_predicted, fs_pred ==0)
 num_1 <- count(q1_predicted, fs_pred ==1)
 ```
 
-```{r}
-num_0
-num_1
-```
-
+Looking at the predicted values, there are 0 predicted values of zero, and 11 predicted values of 1.
 
 # Q4: Run a logit model in which you use a second-order approximation. Recover the predicted values. What is the correlation among the predicted values from questions one, two, and four.
 
 ```{r}
-sd1 <- svydesign(ids = ~0,weights = df$PERWT, data = df)
+sd1 <- svydesign(ids = ~0,weights = df$PERWT, data = df_test)
 
 lm4 <- svyglm(child ~ AGE + AGE**2 + AGE*xy_race + AGE*xy_hisp + AGE*xy_met 
-           + less_hs + less_hs*xy_race + less_hs*xy_hisp + less_hs*xy_met 
-           + some_hs + some_hs*xy_race + some_hs*xy_hisp + some_hs*xy_met 
-           + ged + ged*xy_race + ged*xy_hisp + ged*xy_met  
-           + hs_grad + hs_grad*xy_race + hs_grad*xy_hisp + hs_grad*xy_met 
-           + some_col + some_col*xy_race + some_col*xy_hisp + some_col*xy_met  
-           + assoc_deg + assoc_deg*xy_race + assoc_deg*xy_hisp + assoc_deg*xy_met 
-           + bach + bach*xy_race + bach*xy_hisp + bach*xy_met  
-           + masters + masters*xy_race + masters*xy_hisp + masters*xy_met  
-           + profd + profd*xy_race + profd*xy_hisp + profd*xy_met  
-           + phd + phd*xy_race + phd*xy_hisp + phd*xy_met  
+           + educ_xy +  educ_xy*xy_race +  educ_xy*xy_hisp +  educ_xy*xy_met 
            + xy_race + xy_race*xy_hisp + xy_race*xy_met
            + xy_hisp + xy_hisp*xy_met
            + xy_met, 
@@ -270,8 +211,29 @@ lm4 <- svyglm(child ~ AGE + AGE**2 + AGE*xy_race + AGE*xy_hisp + AGE*xy_met
 ```
 
 ```{r}
-summary(lm4)
+q1_predicted$seclog_pred <-lm4$fitted.values
 ```
+
+Below are the summary statistics and histogram for the recovered predicted values:
+
+```{r}
+summary(q1_predicted$seclog_pred )
+```
+
+
+```{r}
+ggplot(q1_predicted, aes(x = seclog_pred))+
+  geom_histogram(bins = 50, fill = "magenta")+
+  labs(
+    x = "Predicted Values",
+    y = "No. of values",
+    title = "Predicted Values from Second-order Logit Regression",
+    xcoords = c(-0.5, 1.5)
+  )+
+  theme_light()
+```
+
+
 
 # Use a five-fold cross validation to pick the best out-of-sample estimates for questions one, two, and four. How do the out-of-sample predictions compare to the within sample prediction you derive in question four?
 
