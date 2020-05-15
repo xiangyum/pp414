@@ -1,0 +1,106 @@
+---
+title: 'Assignment #2'
+author: "Cooper Nederhood & Xiangyu Ma"
+date: "November 2, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  include = FALSE,
+  options(digits = 3))
+```
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(MASS)
+library(sem)
+library(dplyr)
+set.seed(47)
+```
+
+
+## Set up data
+```{r}
+setwd("/home/cooper/Documents/autumn_2018/applied_regression/homeworks/HW_2")
+df <- read_csv("usa_00001.csv")
+head(df)
+print(2+2)
+```
+
+## Filter and save data out
+```{r}
+df_subset <- filter(df, AGE<=40, AGE>=20, SEX==2, STATEICP==71)
+write_csv(df_subset, "filtered_women.csv")
+```
+
+## Work with filtered data and generate the flags
+```{r}
+#rm(df)
+df_subset <- mutate(df_subset, xy_race = if_else(RACE == 1, "White", 
+                                   if_else(RACE == 2, "Black",
+                                           if_else(RACE >3 & RACE < 7, "Asian", "Other")))) 
+df_subset <- mutate(df_subset, xy_hisp = if_else(HISPAN == 0, 0, 1))
+
+df_subset <- mutate(df_subset, xy_met = if_else(MET2013 == 0, 0, 1))
+
+# recode a bunch of dummy variables for education
+df_subset <- mutate(df_subset, less_hs = if_else(EDUCD < 30, 1, 0)) %>%
+  mutate(some_hs = if_else(EDUCD >= 30 & EDUCD < 60, 1, 0)) %>%
+  mutate(ged = if_else(EDUCD == 64, 1, 0)) %>%
+  mutate(hs_grad = if_else(EDUCD == 63, 1, 0)) %>%
+  mutate(some_col = if_else((EDUCD > 64 & EDUCD < 81), 1, 
+    if_else(EDUCD == 90, 1, 
+        if_else(EDUCD == 100, 1, 
+            if_else(EDUCD >= 110 & EDUC < 114, 1, 0))))) %>%
+  mutate(assoc_deg = if_else(EDUCD > 80 & EDUC <90, 1, 0)) %>%
+  mutate(bach = if_else(EDUCD == 101, 1, 0)) %>%
+  mutate(masters = if_else(EDUCD == 114, 1, 0)) %>%
+  mutate(profd = if_else(EDUCD == 115, 1, 0)) %>%
+  mutate(phd = if_else(EDUCD == 116, 1, 0))
+```
+
+
+# Question 1: Run an OLS equation using whether the woman has a child or not against her age, education, race, Hispanic status, and place of residence. Recover the predicted values. Are they within the unit interval?
+```{r}
+df <- df_subset
+names(df)
+```
+
+
+```{r}
+# Add flag for having a child or not
+df <- mutate(df, has_child = if_else(NCHILD==0, 0, 1))
+```
+
+```{r}
+lm1 <- lm(has_child ~ AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_deg + bach + masters + profd + phd + xy_race + xy_hisp + MET2013, df, weights=PERWT)
+summary(lm1)
+```
+
+```{r}
+q1_predicted <- as_tibble(list(pred = lm1$fitted.values))
+```
+
+
+```{r}
+ggplot(q1_predicted, aes(x = pred))+
+  geom_histogram(binwidth = 0.01)
+```
+
+# Question 2: Run the same equation using a logit model rather than the OLS. Recover the predicted values. What is the correlation between the predicted values in question one and two?
+
+```{r}
+lm2 <- glm(has_child ~ AGE + less_hs + some_hs + ged + hs_grad + some_col + assoc_deg + bach + masters + profd + phd + xy_race + xy_hisp + MET2013,
+    family = binomial("logit"),
+    data = df)
+summary(lm2)
+
+```
+
+
+
+
+
+
